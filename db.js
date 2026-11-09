@@ -6,6 +6,7 @@
 const { DatabaseSync } = require("node:sqlite");
 const path = require("path");
 const crypto = require("crypto");
+   require("fs").mkdirSync(path.join(__dirname, "data"), { recursive: true });
 
 const raw = new DatabaseSync(path.join(__dirname, "data", "rentals.db"));
 raw.exec("PRAGMA journal_mode = WAL");
