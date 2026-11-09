@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abante Rentals - Admin Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginView" class="login-wrap">
+  <form class="login-box" onsubmit="adminLogin(event)" novalidate>
+    <div class="logo">Abante<span>Rentals</span> Admin</div>
+    <p class="sub">Sign in with your admin account.</p>
+    <div id="loginMsg" class="msg"></div>
+    <div class="field"><label for="loginEmail">Email</label><input type="email" id="loginEmail" autocomplete="username" value="admin@abante.com"></div>
+    <div class="field"><label for="loginPassword">Password</label><input type="password" id="loginPassword" autocomplete="current-password"></div>
+    <button class="btn" style="width:100%" type="submit">Login</button>
+  </form>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="appView" class="hidden shell">
+  <aside class="sidebar">
+    <div class="logo">Abante<span>Rentals</span></div>
+    <div class="side-label">ADMIN MENU</div>
+    <nav class="side-nav">
+      <button class="side-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="side-btn" data-tab="cars">Cars &amp; Fleet</button>
+      <button class="side-btn" data-tab="reservations">Bookings</button>
+      <button class="side-btn" data-tab="users">Users</button>
+      <button class="side-btn" data-tab="maintenance">Maintenance</button>
+      <button class="side-btn" data-tab="reports">Reports</button>
+      <button class="side-btn" data-tab="settings">Settings</button>
+    </nav>
+    <button class="side-btn logout" onclick="adminLogout()">Logout</button>
+  </aside>
+
+  <main class="content">
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard">
+      <h2>Dashboard</h2>
+      <p class="page-sub">Overview of your rental operations</p>
+      <div class="stats">
+        <div class="stat"><span>Total revenue (est.)</span><strong id="stRevenue">₱0</strong><em class="up">Confirmed + completed</em></div>
+        <div class="stat"><span>Active rentals</span><strong id="stActive">0</strong><em id="stActiveSub">of 0 vehicles</em></div>
+        <div class="stat"><span>Pending approvals</span><strong id="stPending">0</strong><em class="warn">Action needed</em></div>
+        <div class="stat"><span>Maintenance queue</span><strong id="stMaint">0</strong><em>Cars in maintenance</em></div>
+      </div>
+      <div class="two" style="margin-bottom:20px">
+        <div class="panel"><h3>Recent reservations</h3><ul class="list" id="recentList"></ul></div>
+        <div class="panel"><h3>Fleet status</h3><div id="fleetBars"></div></div>
+      </div>
+      <div class="two">
+        <div class="panel">
+          <h3>Pending Reservation Queue</h3>
+          <div class="toolbar"><button class="btn small" onclick="processNextReservation()">Confirm Next in Queue</button></div>
+          <ul class="list" id="queueList"></ul>
+        </div>
+        <div class="panel">
+          <h3>Admin Action History</h3>
+          <div class="toolbar"><button class="btn small light" onclick="undoLastStatusChange()">Undo Last Status Change</button></div>
+          <ul class="list" id="actionList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARS -->
+    <section id="tab-cars" class="hidden">
+      <h2>Cars &amp; Fleet</h2>
+      <div class="toolbar">
+        <input id="carSearch" placeholder="Search cars..." oninput="renderCars()">
+        <select id="carSearchMode" onchange="renderCars()">
+          <option value="all">All fields (Linear Search)</option>
+          <option value="name">Name prefix (BST)</option>
+          <option value="price">Exact price (Binary Search)</option>
+          <option value="status">Availability (Linear Search)</option>
+        </select>
+        <select id="carSort" onchange="renderCars()">
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="price-asc">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="name-asc">Name A-Z</option>
+          <option value="name-desc">Name Z-A</option>
+        </select>
+        <button class="btn" onclick="openCarModal()">+ Add Car</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>IMAGE</th><th>CAR</th><th>DETAILS</th><th>PRICE / DAY</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+        <tbody id="carRows"></tbody>
+      </table></div>
+    </section>
+
+    <!-- RESERVATIONS -->
+    <section id="tab-reservations" class="hidden">
+      <h2>Bookings</h2>
+      <div class="toolbar">
+        <input id="resSearch" placeholder="Search customer, email, car or status..." oninput="renderReservations()">
+        <select id="resSort" onchange="renderReservations()">
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="pickup">Pickup date</option>
+          <option value="name-asc">Customer A-Z</option>
+          <option value="name-desc">Customer Z-A</option>
+        </select>
+        <button class="btn" onclick="openResModal()">+ Add Booking</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>CUSTOMER</th><th>CAR</th><th>PICKUP</th><th>RETURN</th><th>MESSAGE</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+        <tbody id="resRows"></tbody>
+      </table></div>
+    </section>
+
+    <!-- USERS -->
+    <section id="tab-users" class="hidden">
+      <h2>Users</h2>
+      <p class="page-sub">Customer and administrator accounts</p>
+      <div class="stats user-stats">
+        <div class="stat"><span>Total users</span><strong id="userTotal">0</strong></div>
+        <div class="stat"><span>Customers</span><strong id="userCustomers">0</strong></div>
+        <div class="stat"><span>Administrators</span><strong id="userAdmins">0</strong></div>
+      </div>
+      <div class="toolbar">
+        <input id="userSearch" placeholder="Search name, email or role..." oninput="renderUsers()">
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>USER</th><th>EMAIL</th><th>JOINED</th><th>BOOKINGS</th><th>ROLE</th></tr></thead>
+        <tbody id="userRows"></tbody>
+      </table></div>
+    </section>
+
+    <!-- MAINTENANCE -->
+    <section id="tab-maintenance" class="hidden">
+      <h2>Maintenance</h2>
+      <p class="page-sub">Cars currently set to "maintenance". Change a car's availability in Cars &amp; Fleet to add it here.</p>
+      <div class="table-wrap"><table><thead><tr><th>CAR</th><th>DETAILS</th><th>STATUS</th><th></th></tr></thead><tbody id="maintRows"></tbody></table></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="tab-reports" class="hidden">
+      <h2>Reports</h2>
+      <p class="page-sub">Business analytics calculated from your reservations (price x rental days)</p>
+      <div class="three" id="reportCards"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="hidden">
+      <h2>Settings</h2>
+      <p class="page-sub">Your administrator account</p>
+      <div class="panel" style="max-width:500px">
+        <div class="field"><label>Signed in as</label><input id="setEmail" readonly></div>
+        <div class="field"><label>Currency</label><input value="₱ (Philippine Peso)" readonly></div>
+        <button class="btn" onclick="adminLogout()">Sign out</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ CAR MODAL ============ -->
+<div id="carModal" class="modal">
+  <form class="modal-box" onsubmit="saveCar(event)" novalidate>
+    <h2 id="carModalTitle">Add Car</h2>
+    <div id="carMsg" class="msg"></div>
+    <input type="hidden" id="carId">
+    <img id="carPreview" class="preview hidden" alt="Exterior photo preview">
+    <div class="field"><label for="carImage">Exterior Photo (JPG, PNG, WEBP, max 2 MB)</label>
+      <input type="file" id="carImage" accept="image/jpeg,image/png,image/webp" onchange="previewImage()"></div>
+    <img id="interiorPreview" class="preview hidden" alt="Interior photo preview">
+    <div class="field"><label for="interiorImage">Interior Photo (JPG, PNG, WEBP, max 2 MB)</label>
+      <input type="file" id="interiorImage" accept="image/jpeg,image/png,image/webp" onchange="previewInteriorImage()"></div>
+    <div class="field"><label for="carName">Car Name</label><input id="carName" maxlength="80" placeholder="e.g. Toyota Vios"></div>
+    <div class="row">
+      <div class="field"><label for="carBrand">Brand</label><input id="carBrand" maxlength="50"></div>
+      <div class="field"><label for="carModel">Model</label><input id="carModel" maxlength="50"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="carYear">Year</label><input type="number" id="carYear"></div>
+      <div class="field"><label for="carPrice">Price per day (₱)</label><input type="number" id="carPrice" step="0.01"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="carSeats">Seats</label><input type="number" id="carSeats"></div>
+      <div class="field"><label for="carStatus">Availability</label>
+        <select id="carStatus"><option>available</option><option>reserved</option><option>maintenance</option><option>unavailable</option></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="carTrans">Transmission</label><select id="carTrans"><option>Automatic</option><option>Manual</option></select></div>
+      <div class="field"><label for="carFuel">Fuel Type</label><select id="carFuel"><option>Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="carEngine">Engine</label><input id="carEngine" maxlength="80" placeholder="e.g. 1.5L 4-cylinder"></div>
+      <div class="field"><label for="carDrivetrain">Drivetrain</label><input id="carDrivetrain" maxlength="40" placeholder="e.g. FWD or AWD"></div>
+    </div>
+    <div class="field"><label for="carTireSize">Tire Size</label><input id="carTireSize" maxlength="40" placeholder="e.g. 205/55 R16"></div>
+    <div class="field"><label for="carDesc">Description</label><textarea id="carDesc" maxlength="300"></textarea></div>
+    <div class="toolbar"><button class="btn" type="submit" id="carSaveBtn">Save Car</button>
+      <button class="btn light" type="button" onclick="closeCarModal()">Cancel</button></div>
+  </form>
+</div>
+<!-- ============ BOOKING MODAL ============ -->
+<div id="resModal" class="modal">
+  <form class="modal-box" onsubmit="saveReservation(event)" novalidate>
+    <h2 id="resModalTitle">Add Booking</h2>
+    <div id="resMsg" class="msg"></div>
+    <input type="hidden" id="resId">
+    <div class="field"><label for="resCar">Car</label><select id="resCar"></select></div>
+    <div class="row">
+      <div class="field"><label for="resName">Customer Name</label><input id="resName" maxlength="80"></div>
+      <div class="field"><label for="resEmail">Customer Email</label><input type="email" id="resEmail" maxlength="120"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="resPickup">Pickup Date</label><input type="date" id="resPickup"></div>
+      <div class="field"><label for="resReturn">Return Date</label><input type="date" id="resReturn"></div>
+    </div>
+    <div class="field"><label for="resStatus">Status</label>
+      <select id="resStatus"><option>pending</option><option>confirmed</option><option>completed</option><option>cancelled</option></select></div>
+    <div class="field"><label for="resMessage">Message</label><textarea id="resMessage" maxlength="500"></textarea></div>
+    <div class="toolbar"><button class="btn" type="submit" id="resSaveBtn">Save Booking</button>
+      <button class="btn light" type="button" onclick="closeResModal()">Cancel</button></div>
+  </form>
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="dsa.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
